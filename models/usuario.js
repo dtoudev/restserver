@@ -31,4 +31,10 @@ const UsuarioSchema = Schema({
   },
 });
 
+UsuarioSchema.methods.toJSON = function () {
+  // el operador ... + objeto lo que hace es unificar los campos que no estan ya declarados en la funcion
+  const { __v, password, ...usuario } = this.toObject();
+  return usuario;
+};
+
 module.exports = model("Usuario", UsuarioSchema);

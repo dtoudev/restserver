@@ -3,36 +3,44 @@ const bcrypt = require("bcryptjs");
 
 const Usuario = require("../models/usuario");
 
-const usuariosGet = (req, res) => {
-  const { id, popo } = req.query;
+const usuariosGet = async (req, res) => {
+  const { limite = 5, desde = 0 } = req.query;
+  const query = {
+    estado: true,
+  };
 
+  //promise.all ejecuta las dos promesas de manera simultanea, para querys que tardan demasiado
+  const [total, usuarios] = await Promise.all([
+    Usuario.countDocuments(query),
+    Usuario.find(query).limit(Number(limite)).skip(Number(desde)),
+  ]);
   res.json({
-    msg: "get API - Controlador",
-    q: id,
-    popo: popo,
+    total,
+    usuarios,
   });
 };
 
-const usuariosPut = (req, res) => {
-  const id = req.params.id;
+const usuariosPut = async (req, res) => {
+  const { id } = req.params;
+  const { _id, password, google, ...resto } = req.body;
+
+  if (password) {
+    //ENCRIPTAR LA CONTRASEÑA
+    const salt = bcrypt.genSaltSync();
+    resto.password = bcrypt.hashSync(password, salt);
+  }
+
+  const usuario = await Usuario.findByIdAndUpdate(id, resto);
 
   res.json({
     msg: "put API - Controlador",
-    id: id,
+    usuario,
   });
 };
 
 const usuariosPost = async (req, res) => {
   const { nombre, correo, password, rol } = req.body;
   const usuario = new Usuario({ nombre, correo, password, rol });
-
-  //COMPROBAR MAIL
-  const existeEmail = await Usuario.findOne({ correo });
-  if (existeEmail) {
-    return res.status(400).json({
-      msg: "El correo esta ya registrado",
-    });
-  }
 
   //ENCRIPTAR LA CONTRASEÑA
   const salt = bcrypt.genSaltSync();
@@ -46,9 +54,13 @@ const usuariosPost = async (req, res) => {
   });
 };
 
-const usuariosDelete = (req, res) => {
+const usuariosDelete = async (req, res) => {
+  const { id } = req.params;
+  const usuario = await Usuario.findByIdAndUpdate(id, { estado: false });
+
   res.json({
-    msg: "delete API - Controlador",
+    msg: `El usuario con el ID ${id} ha sido borrado correctamente`,
+    usuario,
   });
 };
 module.exports = {
